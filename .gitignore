@@ -1,0 +1,18 @@
+# Environment files with secrets
+.env
+
+# Compiled binaries
+schema-viz
+*.exe
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Go
+/vendor/
