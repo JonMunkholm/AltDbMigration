@@ -140,7 +140,23 @@ func (i *Introspector) getColumns(ctx context.Context, tableName string) ([]Colu
 				   AND tc.table_schema = 'public'
 				 LIMIT 1),
 				false
-			) as is_primary
+			) as is_primary,
+			COALESCE(
+				(SELECT true FROM information_schema.table_constraints tc
+				 JOIN information_schema.key_column_usage kcu
+				   ON tc.constraint_name = kcu.constraint_name
+				  AND tc.table_schema = kcu.table_schema
+				 WHERE tc.constraint_type = 'UNIQUE'
+				   AND tc.table_name = c.table_name
+				   AND kcu.column_name = c.column_name
+				   AND tc.table_schema = 'public'
+				   -- Only single-column unique constraints are valid FK targets
+				   AND (SELECT COUNT(*) FROM information_schema.key_column_usage kcu2
+				        WHERE kcu2.constraint_name = tc.constraint_name
+				          AND kcu2.table_schema = tc.table_schema) = 1
+				 LIMIT 1),
+				false
+			) as is_unique
 		FROM information_schema.columns c
 		WHERE c.table_schema = 'public'
 		  AND c.table_name = $1
@@ -157,7 +173,7 @@ func (i *Introspector) getColumns(ctx context.Context, tableName string) ([]Colu
 	columns := []Column{}
 	for rows.Next() {
 		var col Column
-		if err := rows.Scan(&col.Name, &col.DataType, &col.IsNullable, &col.Default, &col.IsPrimary); err != nil {
+		if err := rows.Scan(&col.Name, &col.DataType, &col.IsNullable, &col.Default, &col.IsPrimary, &col.IsUnique); err != nil {
 			return nil, err
 		}
 		columns = append(columns, col)

@@ -40,6 +40,8 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/schema", h.handleGetSchema)
 	mux.HandleFunc("GET /api/databases", h.handleListDatabases)
 	mux.HandleFunc("POST /api/database", h.handleSwitchDatabase)
+	mux.HandleFunc("POST /api/tables", h.handleCreateTable)
+	mux.HandleFunc("POST /api/tables/{tableName}/columns", h.handleAddColumn)
 	mux.Handle("GET /", http.FileServer(http.FS(h.webFS)))
 }
 
@@ -140,4 +142,61 @@ func (h *Handler) handleSwitchDatabase(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok", "database": req.Name})
+}
+
+type createTableRequest struct {
+	Name string `json:"name"`
+}
+
+func (h *Handler) handleCreateTable(w http.ResponseWriter, r *http.Request) {
+	var req createTableRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Name == "" {
+		http.Error(w, "table name is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.introspector.CreateTable(r.Context(), req.Name); err != nil {
+		http.Error(w, "failed to create table: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok", "table": req.Name})
+}
+
+func (h *Handler) handleAddColumn(w http.ResponseWriter, r *http.Request) {
+	tableName := r.PathValue("tableName")
+	if tableName == "" {
+		http.Error(w, "table name is required", http.StatusBadRequest)
+		return
+	}
+
+	var req schema.AddColumnRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Name == "" {
+		http.Error(w, "column name is required", http.StatusBadRequest)
+		return
+	}
+
+	if req.Type == "" {
+		http.Error(w, "column type is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.introspector.AddColumn(r.Context(), tableName, req); err != nil {
+		http.Error(w, "failed to add column: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok", "column": req.Name})
 }

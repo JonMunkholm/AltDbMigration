@@ -6,6 +6,7 @@ type Column struct {
 	DataType   string  `json:"dataType"`
 	IsNullable bool    `json:"isNullable"`
 	IsPrimary  bool    `json:"isPrimary"`
+	IsUnique   bool    `json:"isUnique"`
 	Default    *string `json:"default,omitempty"`
 }
 

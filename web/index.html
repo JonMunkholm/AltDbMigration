@@ -4,478 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Database Schema Visualizer</title>
+    <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
     <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
     <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #1a1a2e;
-            color: #eee;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        header {
-            padding: 12px 20px;
-            background: #16213e;
-            border-bottom: 1px solid #0f3460;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        header h1 {
-            font-size: 18px;
-            font-weight: 600;
-            color: #e94560;
-        }
-
-        .search-container {
-            flex: 1;
-            max-width: 300px;
-            position: relative;
-        }
-
-        #search {
-            width: 100%;
-            padding: 8px 32px 8px 12px;
-            background: #1a1a2e;
-            border: 1px solid #0f3460;
-            border-radius: 6px;
-            color: #fff;
-            font-size: 14px;
-            outline: none;
-        }
-
-        #search:focus {
-            border-color: #e94560;
-        }
-
-        #search::placeholder {
-            color: #666;
-        }
-
-        .search-clear {
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: #666;
-            font-size: 16px;
-            cursor: pointer;
-            padding: 4px;
-            display: none;
-        }
-
-        .search-clear:hover {
-            color: #e94560;
-        }
-
-        .search-container.has-value .search-clear {
-            display: block;
-        }
-
-        .header-stats {
-            color: #888;
-            font-size: 13px;
-        }
-
-        .refresh-btn {
-            background: #0f3460;
-            border: 1px solid #3498db;
-            border-radius: 6px;
-            color: #3498db;
-            padding: 6px 12px;
-            font-size: 13px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s;
-        }
-
-        .refresh-btn:hover {
-            background: #3498db;
-            color: #fff;
-        }
-
-        .refresh-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .refresh-btn.loading .refresh-icon {
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .db-selector {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: #0f3460;
-            padding: 4px 12px 4px 8px;
-            border-radius: 6px;
-            border: 1px solid #3498db;
-        }
-
-        .db-selector label {
-            color: #3498db;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 600;
-        }
-
-        #db-select {
-            background: transparent;
-            border: none;
-            color: #fff;
-            padding: 4px 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            outline: none;
-            min-width: 120px;
-        }
-
-        #db-select:hover {
-            color: #3498db;
-        }
-
-        #db-select:focus {
-            color: #e94560;
-        }
-
-        #db-select option {
-            background: #16213e;
-            color: #fff;
-        }
-
-        .no-relationships-notice {
-            position: absolute;
-            bottom: 60px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #16213e;
-            border: 1px solid #0f3460;
-            border-radius: 6px;
-            padding: 8px 16px;
-            font-size: 12px;
-            color: #888;
-            z-index: 10;
-        }
-
-        .relationship-details {
-            padding: 16px 20px;
-            border-bottom: 1px solid #0f3460;
-        }
-
-        .relationship-details h3 {
-            font-size: 12px;
-            color: #888;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 12px;
-        }
-
-        .relationship-card {
-            background: #1a1a2e;
-            border-radius: 6px;
-            padding: 12px;
-            border-left: 3px solid #3498db;
-        }
-
-        .relationship-card .from,
-        .relationship-card .to {
-            font-size: 13px;
-            color: #fff;
-        }
-
-        .relationship-card .arrow {
-            color: #3498db;
-            margin: 8px 0;
-            font-size: 14px;
-        }
-
-        .relationship-card .table-name {
-            color: #e94560;
-            font-weight: 600;
-        }
-
-        .relationship-card .column-name {
-            color: #3498db;
-        }
-
-        .container {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-            position: relative;
-        }
-
-        #cy {
-            flex: 1;
-            background: #1a1a2e;
-        }
-
-        /* Zoom controls */
-        .zoom-controls {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            z-index: 10;
-        }
-
-        .zoom-btn {
-            width: 36px;
-            height: 36px;
-            background: #16213e;
-            border: 1px solid #0f3460;
-            border-radius: 6px;
-            color: #fff;
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s;
-        }
-
-        .zoom-btn:hover {
-            background: #0f3460;
-        }
-
-        .zoom-level {
-            text-align: center;
-            font-size: 11px;
-            color: #666;
-            padding: 4px 0;
-        }
-
-        /* Legend */
-        .legend {
-            position: absolute;
-            top: 16px;
-            left: 16px;
-            background: #16213e;
-            border: 1px solid #0f3460;
-            border-radius: 8px;
-            padding: 12px 16px;
-            font-size: 12px;
-            z-index: 10;
-        }
-
-        .legend-title {
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #888;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 4px;
-        }
-
-        .legend-icon {
-            width: 16px;
-            height: 16px;
-            border-radius: 3px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-        }
-
-        .legend-icon.pk { background: #f1c40f; color: #000; }
-        .legend-icon.fk { background: #3498db; color: #fff; }
-        .legend-icon.line { background: none; border-top: 2px solid #3498db; width: 20px; height: 0; }
-
-        /* Details panel */
-        #details {
-            width: 340px;
-            background: #16213e;
-            border-left: 1px solid #0f3460;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .details-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid #0f3460;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .details-header h2 {
-            font-size: 16px;
-            color: #e94560;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .details-header h2::before {
-            content: '';
-            width: 10px;
-            height: 10px;
-            background: #e94560;
-            border-radius: 2px;
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            color: #666;
-            font-size: 20px;
-            cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 4px;
-        }
-
-        .close-btn:hover {
-            background: #0f3460;
-            color: #fff;
-        }
-
-        .details-content {
-            flex: 1;
-            padding: 16px 20px;
-            overflow-y: auto;
-        }
-
-        .details-empty {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: #666;
-            font-style: italic;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .column-list {
-            list-style: none;
-        }
-
-        .column-item {
-            padding: 10px 12px;
-            background: #1a1a2e;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            border-left: 3px solid transparent;
-        }
-
-        .column-item.primary { border-left-color: #f1c40f; }
-        .column-item.fk { border-left-color: #3498db; }
-
-        .column-name {
-            font-weight: 600;
-            color: #fff;
-        }
-
-        .column-type {
-            font-size: 12px;
-            color: #888;
-            margin-top: 2px;
-            font-family: monospace;
-        }
-
-        .column-badges {
-            margin-top: 6px;
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-
-        .badge {
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 3px;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        .badge.pk { background: #f1c40f; color: #000; }
-        .badge.nullable { background: #2c3e50; color: #95a5a6; }
-        .badge.fk { background: #3498db; color: #fff; }
-
-        .fk-ref {
-            font-size: 11px;
-            color: #3498db;
-            margin-top: 4px;
-            cursor: pointer;
-        }
-
-        .fk-ref:hover {
-            text-decoration: underline;
-        }
-
-        .section-title {
-            font-size: 11px;
-            text-transform: uppercase;
-            color: #666;
-            margin: 16px 0 10px;
-            letter-spacing: 1px;
-        }
-
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: #666;
-        }
-
-        .error {
-            color: #e74c3c;
-            padding: 20px;
-            text-align: center;
-        }
-
-        /* Search results highlight */
-        .search-match {
-            background: rgba(233, 69, 96, 0.3);
-        }
-
-        /* Keyboard hint */
-        .keyboard-hint {
-            position: absolute;
-            bottom: 20px;
-            right: 360px;
-            font-size: 11px;
-            color: #555;
-        }
-
-        kbd {
-            background: #0f3460;
-            padding: 2px 6px;
-            border-radius: 3px;
-            margin: 0 2px;
-        }
-    </style>
 </head>
 <body>
     <header>
@@ -483,6 +15,10 @@
         <div class="db-selector">
             <label for="db-select">DB:</label>
             <select id="db-select" onchange="switchDatabase(this.value)"></select>
+        </div>
+        <div class="view-toggle">
+            <button id="view-graph" class="active" onclick="setView('graph')">Graph</button>
+            <button id="view-list" onclick="setView('list')">List</button>
         </div>
         <div class="search-container" id="search-container">
             <input type="text" id="search" placeholder="Search tables or columns... (/)" />
@@ -496,6 +32,7 @@
     </header>
     <div class="container">
         <div id="cy"><div class="loading">Loading schema...</div></div>
+        <div id="list-view"></div>
 
         <div class="legend">
             <div class="legend-title">Legend</div>
@@ -524,617 +61,99 @@
         </div>
     </div>
 
-    <script>
-        let cy;
-        let schemaData;
-        let selectedTable = null;
-
-        async function loadDatabases() {
-            try {
-                const response = await fetch('/api/databases');
-                if (!response.ok) throw new Error('Failed to load databases');
-                const data = await response.json();
-
-                const select = document.getElementById('db-select');
-                select.innerHTML = '';
-
-                (data.databases || []).forEach(db => {
-                    const option = document.createElement('option');
-                    option.value = db;
-                    option.textContent = db;
-                    if (db === data.current) {
-                        option.selected = true;
-                    }
-                    select.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Failed to load databases:', error);
-            }
-        }
-
-        async function switchDatabase(dbName) {
-            const select = document.getElementById('db-select');
-            select.disabled = true;
-
-            try {
-                const response = await fetch('/api/database', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: dbName })
-                });
-
-                if (!response.ok) {
-                    const error = await response.text();
-                    throw new Error(error);
-                }
-
-                await loadSchema();
-            } catch (error) {
-                alert('Failed to switch database: ' + error.message);
-                await loadDatabases(); // Reset dropdown to current DB
-            } finally {
-                select.disabled = false;
-            }
-        }
-
-        async function refreshSchema() {
-            const btn = document.getElementById('refresh-btn');
-            btn.classList.add('loading');
-            btn.disabled = true;
-
-            try {
-                await loadSchema();
-            } finally {
-                btn.classList.remove('loading');
-                btn.disabled = false;
-            }
-        }
-
-        async function loadSchema() {
-            try {
-                const response = await fetch('/api/schema');
-                if (!response.ok) throw new Error('Failed to load schema');
-                schemaData = await response.json();
-                schemaData.tables = schemaData.tables || [];
-
-                document.getElementById('stats').textContent =
-                    `${schemaData.tables.length} tables`;
-
-                if (schemaData.tables.length === 0) {
-                    document.getElementById('cy').innerHTML =
-                        '<div class="loading">No tables found in public schema</div>';
-                    return;
-                }
-
-                initGraph();
-                setupSearch();
-                setupZoomControls();
-                setupKeyboardShortcuts();
-            } catch (error) {
-                document.getElementById('cy').innerHTML =
-                    `<div class="error">Error: ${error.message}</div>`;
-            }
-        }
-
-        function initGraph() {
-            const elements = [];
-
-            // Pre-calculate incoming relationships for each table
-            const incomingRefs = {};
-            schemaData.tables.forEach(table => {
-                (table.foreignKeys || []).forEach(fk => {
-                    incomingRefs[fk.referencesTable] = (incomingRefs[fk.referencesTable] || 0) + 1;
-                });
-            });
-
-            // Create nodes for each table
-            schemaData.tables.forEach(table => {
-                const outgoing = (table.foreignKeys || []).length;
-                const incoming = incomingRefs[table.name] || 0;
-
-                const columns = (table.columns || []).slice(0, 8).map(col => {
-                    const pk = col.isPrimary ? '🔑 ' : '   ';
-                    const fk = (table.foreignKeys || []).some(f => f.columnName === col.name) ? '🔗 ' : '   ';
-                    const prefix = col.isPrimary ? pk : fk;
-                    return `${prefix}${col.name}`;
-                });
-
-                // Add "..." if more columns
-                if ((table.columns || []).length > 8) {
-                    columns.push(`   ... +${table.columns.length - 8} more`);
-                }
-
-                // Build header with relationship badges
-                let header = table.name;
-                const badges = [];
-                if (incoming > 0) badges.push(`← ${incoming}`);
-                if (outgoing > 0) badges.push(`→ ${outgoing}`);
-                if (badges.length > 0) {
-                    header += `  [${badges.join(' ')}]`;
-                }
-
-                const label = `${header}\n${'─'.repeat(Math.max(header.length, 20))}\n${columns.join('\n')}`;
-
-                elements.push({
-                    data: {
-                        id: table.name,
-                        label: label,
-                        tableName: table.name,
-                        incoming: incoming,
-                        outgoing: outgoing
-                    }
-                });
-            });
-
-            // Create edges for foreign keys
-            let relationshipCount = 0;
-            schemaData.tables.forEach(table => {
-                (table.foreignKeys || []).forEach(fk => {
-                    relationshipCount++;
-                    elements.push({
-                        data: {
-                            id: `${table.name}-${fk.columnName}-${fk.referencesTable}`,
-                            source: table.name,
-                            target: fk.referencesTable,
-                            sourceColumn: fk.columnName,
-                            targetColumn: fk.referencesColumn,
-                            label: `${table.name}.${fk.columnName} → ${fk.referencesTable}.${fk.referencesColumn}`
-                        }
-                    });
-                });
-            });
-
-            // Show/hide no relationships notice
-            document.getElementById('no-relationships').style.display =
-                relationshipCount === 0 ? 'block' : 'none';
-
-            document.getElementById('cy').innerHTML = '';
-
-            cy = cytoscape({
-                container: document.getElementById('cy'),
-                elements: elements,
-                minZoom: 0.2,
-                maxZoom: 3,
-                wheelSensitivity: 0.3,
-                style: [
-                    {
-                        selector: 'node',
-                        style: {
-                            'label': 'data(label)',
-                            'text-valign': 'center',
-                            'text-halign': 'center',
-                            'background-color': '#0f3460',
-                            'color': '#fff',
-                            'font-size': '11px',
-                            'font-family': 'Monaco, Consolas, monospace',
-                            'width': 'label',
-                            'height': 'label',
-                            'padding': '16px',
-                            'shape': 'round-rectangle',
-                            'border-width': '2px',
-                            'border-color': '#3498db',
-                            'text-wrap': 'wrap',
-                            'text-max-width': '200px'
-                        }
-                    },
-                    {
-                        selector: 'node:selected',
-                        style: {
-                            'border-color': '#e94560',
-                            'border-width': '3px'
-                        }
-                    },
-                    {
-                        selector: 'node.highlighted',
-                        style: {
-                            'border-color': '#e94560',
-                            'border-width': '3px',
-                            'background-color': '#1a3a5c'
-                        }
-                    },
-                    {
-                        selector: 'node.dimmed',
-                        style: {
-                            'opacity': 0.3
-                        }
-                    },
-                    {
-                        selector: 'edge',
-                        style: {
-                            'width': 2,
-                            'line-color': '#3498db',
-                            'target-arrow-color': '#3498db',
-                            'target-arrow-shape': 'triangle',
-                            'curve-style': 'bezier',
-                            'opacity': 0.7
-                        }
-                    },
-                    {
-                        selector: 'edge:selected',
-                        style: {
-                            'line-color': '#e94560',
-                            'target-arrow-color': '#e94560',
-                            'opacity': 1,
-                            'width': 3
-                        }
-                    },
-                    {
-                        selector: 'edge.highlighted',
-                        style: {
-                            'line-color': '#e94560',
-                            'target-arrow-color': '#e94560',
-                            'opacity': 1,
-                            'width': 3
-                        }
-                    },
-                    {
-                        selector: 'edge.dimmed',
-                        style: {
-                            'opacity': 0.15
-                        }
-                    }
-                ],
-                layout: {
-                    name: 'dagre',
-                    rankDir: 'LR',
-                    nodeSep: 60,
-                    rankSep: 120,
-                    padding: 50
-                }
-            });
-
-            // Update zoom level display
-            cy.on('zoom', updateZoomLevel);
-            updateZoomLevel();
-
-            // Click on node to show details
-            cy.on('tap', 'node', function(evt) {
-                showTableDetails(evt.target.id());
-                highlightConnections(evt.target.id());
-            });
-
-            // Hover effects
-            cy.on('mouseover', 'node', function(evt) {
-                document.body.style.cursor = 'pointer';
-            });
-
-            cy.on('mouseout', 'node', function(evt) {
-                document.body.style.cursor = 'default';
-            });
-
-            // Show edge label on hover
-            cy.on('mouseover', 'edge', function(evt) {
-                document.body.style.cursor = 'pointer';
-                evt.target.style('label', evt.target.data('label'));
-                evt.target.style('text-background-color', '#0f3460');
-                evt.target.style('text-background-opacity', 1);
-                evt.target.style('text-background-padding', '6px');
-                evt.target.style('text-background-shape', 'roundrectangle');
-                evt.target.style('color', '#fff');
-                evt.target.style('font-size', '11px');
-                evt.target.style('font-family', 'Monaco, Consolas, monospace');
-                evt.target.style('text-border-width', 1);
-                evt.target.style('text-border-color', '#3498db');
-                evt.target.style('text-border-opacity', 1);
-                evt.target.style('width', 3);
-                evt.target.style('line-color', '#e94560');
-                evt.target.style('target-arrow-color', '#e94560');
-            });
-
-            cy.on('mouseout', 'edge', function(evt) {
-                document.body.style.cursor = 'default';
-                evt.target.style('label', '');
-                evt.target.style('width', 2);
-                evt.target.style('line-color', '#3498db');
-                evt.target.style('target-arrow-color', '#3498db');
-            });
-
-            // Click on edge to show relationship details
-            cy.on('tap', 'edge', function(evt) {
-                const edge = evt.target;
-                showRelationshipDetails(
-                    edge.data('source'),
-                    edge.data('sourceColumn'),
-                    edge.data('target'),
-                    edge.data('targetColumn')
-                );
-                highlightRelationship(edge);
-            });
-        }
-
-        function highlightRelationship(edge) {
-            cy.elements().removeClass('highlighted dimmed').addClass('dimmed');
-            edge.removeClass('dimmed').addClass('highlighted');
-            edge.source().removeClass('dimmed').addClass('highlighted');
-            edge.target().removeClass('dimmed').addClass('highlighted');
-        }
-
-        function showRelationshipDetails(fromTable, fromColumn, toTable, toColumn) {
-            selectedTable = null;
-            const details = document.getElementById('details');
-
-            details.innerHTML = `
-                <div class="details-header">
-                    <h2>Relationship</h2>
-                    <button class="close-btn" onclick="closeDetails()">&times;</button>
+    <!-- Create Table Modal -->
+    <div id="create-table-modal" class="modal-overlay" onclick="if(event.target===this) hideCreateTableModal()">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Create New Table</h3>
+                <button class="modal-close" onclick="hideCreateTableModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="new-table-name">Table Name</label>
+                    <input type="text" id="new-table-name" class="form-input" placeholder="e.g., orders" autocomplete="off">
+                    <div class="form-hint">Use lowercase with underscores (e.g., user_orders)</div>
                 </div>
-                <div class="relationship-details">
-                    <h3>Foreign Key</h3>
-                    <div class="relationship-card">
-                        <div class="from">
-                            <span class="table-name">${fromTable}</span>.<span class="column-name">${fromColumn}</span>
-                        </div>
-                        <div class="arrow">&#8595;</div>
-                        <div class="to">
-                            <span class="table-name">${toTable}</span>.<span class="column-name">${toColumn}</span>
+                <div class="form-hint" style="color: #3498db;">
+                    An 'id' primary key column will be added automatically.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideCreateTableModal()">Cancel</button>
+                <button class="btn btn-primary" id="create-table-btn" onclick="createTable()">Create Table</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Column Modal -->
+    <div id="add-column-modal" class="modal-overlay" onclick="if(event.target===this) hideAddColumnModal()">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Add Column to <span id="add-column-table-name"></span></h3>
+                <button class="modal-close" onclick="hideAddColumnModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="new-column-name">Column Name</label>
+                    <input type="text" id="new-column-name" class="form-input" placeholder="e.g., user_id" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="new-column-type">Data Type</label>
+                    <select id="new-column-type" class="form-select">
+                        <option value="text">text - Variable length string</option>
+                        <option value="date">date - Date only</option>
+                        <option value="numeric">numeric - Decimal number</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-checkbox">
+                        <input type="checkbox" id="new-column-nullable">
+                        <span>Nullable</span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-checkbox">
+                        <input type="checkbox" id="new-column-pk">
+                        <span>Primary Key</span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-checkbox">
+                        <input type="checkbox" id="new-column-unique">
+                        <span>Unique</span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-checkbox">
+                        <input type="checkbox" id="new-column-fk" onchange="toggleForeignKeySection()">
+                        <span>Foreign Key</span>
+                    </label>
+                    <div id="fk-section" class="form-section disabled">
+                        <div class="form-section-title">References</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="fk-table">Table</label>
+                                <select id="fk-table" class="form-select" onchange="loadForeignKeyColumns()">
+                                    <option value="">Select table...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="fk-column">Column</label>
+                                <select id="fk-column" class="form-select">
+                                    <option value="">Select column...</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="details-content">
-                    <div class="section-title">Navigate</div>
-                    <ul class="column-list">
-                        <li class="column-item" onclick="navigateToTable('${fromTable}')" style="cursor:pointer">
-                            <div class="column-name">${fromTable}</div>
-                            <div class="column-type">Source table</div>
-                        </li>
-                        <li class="column-item" onclick="navigateToTable('${toTable}')" style="cursor:pointer">
-                            <div class="column-name">${toTable}</div>
-                            <div class="column-type">Referenced table</div>
-                        </li>
-                    </ul>
-                </div>
-            `;
-        }
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideAddColumnModal()">Cancel</button>
+                <button class="btn btn-primary" id="add-column-btn" onclick="addColumn()">Add Column</button>
+            </div>
+        </div>
+    </div>
 
-        function highlightConnections(tableName) {
-            // Reset all
-            cy.elements().removeClass('highlighted dimmed');
-
-            // Get the node and connected edges
-            const node = cy.getElementById(tableName);
-            const connectedEdges = node.connectedEdges();
-            const connectedNodes = connectedEdges.connectedNodes();
-
-            // Dim everything
-            cy.elements().addClass('dimmed');
-
-            // Highlight selected node and its connections
-            node.removeClass('dimmed').addClass('highlighted');
-            connectedEdges.removeClass('dimmed').addClass('highlighted');
-            connectedNodes.removeClass('dimmed');
-        }
-
-        function clearHighlights() {
-            cy.elements().removeClass('highlighted dimmed');
-        }
-
-        function showTableDetails(tableName) {
-            const table = schemaData.tables.find(t => t.name === tableName);
-            if (!table) return;
-
-            selectedTable = tableName;
-            const details = document.getElementById('details');
-
-            const fkColumns = new Set((table.foreignKeys || []).map(fk => fk.columnName));
-            const fkDetails = {};
-            (table.foreignKeys || []).forEach(fk => {
-                fkDetails[fk.columnName] = fk;
-            });
-
-            let html = `
-                <div class="details-header">
-                    <h2>${table.name}</h2>
-                    <button class="close-btn" onclick="closeDetails()">&times;</button>
-                </div>
-                <div class="details-content">
-            `;
-
-            html += `<div class="section-title">Columns (${(table.columns || []).length})</div>`;
-            html += '<ul class="column-list">';
-
-            (table.columns || []).forEach(col => {
-                const isPrimary = col.isPrimary;
-                const isFK = fkColumns.has(col.name);
-                const classes = [isPrimary ? 'primary' : '', isFK ? 'fk' : ''].filter(Boolean).join(' ');
-
-                html += `<li class="column-item ${classes}">`;
-                html += `<div class="column-name">${col.name}</div>`;
-                html += `<div class="column-type">${col.dataType}</div>`;
-                html += '<div class="column-badges">';
-
-                if (isPrimary) html += '<span class="badge pk">PK</span>';
-                if (isFK) html += '<span class="badge fk">FK</span>';
-                if (col.isNullable) html += '<span class="badge nullable">null</span>';
-
-                html += '</div>';
-
-                if (isFK) {
-                    const fk = fkDetails[col.name];
-                    html += `<div class="fk-ref" onclick="navigateToTable('${fk.referencesTable}')">→ ${fk.referencesTable}.${fk.referencesColumn}</div>`;
-                }
-
-                html += '</li>';
-            });
-
-            html += '</ul></div>';
-            details.innerHTML = html;
-        }
-
-        function closeDetails() {
-            selectedTable = null;
-            clearHighlights();
-            cy.elements().unselect();
-            document.getElementById('details').innerHTML =
-                '<div class="details-empty">Click a table to view details</div>';
-        }
-
-        function navigateToTable(tableName) {
-            const node = cy.getElementById(tableName);
-            if (node.length > 0) {
-                // Center and zoom to the node
-                cy.animate({
-                    center: { eles: node },
-                    zoom: 1.2
-                }, { duration: 300 });
-
-                // Select and show details
-                cy.elements().unselect();
-                node.select();
-                showTableDetails(tableName);
-                highlightConnections(tableName);
-            }
-        }
-
-        function setupSearch() {
-            const searchInput = document.getElementById('search');
-            const searchContainer = document.getElementById('search-container');
-            const clearBtn = document.getElementById('search-clear');
-
-            function updateSearch() {
-                const query = searchInput.value.toLowerCase().trim();
-
-                // Toggle clear button visibility
-                if (searchInput.value) {
-                    searchContainer.classList.add('has-value');
-                } else {
-                    searchContainer.classList.remove('has-value');
-                }
-
-                if (!query) {
-                    clearHighlights();
-                    cy.elements().removeClass('dimmed highlighted');
-                    document.getElementById('stats').textContent =
-                        `${schemaData.tables.length} tables`;
-                    return;
-                }
-
-                // Find matching tables
-                const matchingTables = schemaData.tables.filter(table => {
-                    if (table.name.toLowerCase().includes(query)) return true;
-                    return (table.columns || []).some(col =>
-                        col.name.toLowerCase().includes(query)
-                    );
-                });
-
-                const matchingIds = new Set(matchingTables.map(t => t.name));
-
-                // Highlight matches, dim others
-                cy.nodes().forEach(node => {
-                    if (matchingIds.has(node.id())) {
-                        node.removeClass('dimmed').addClass('highlighted');
-                    } else {
-                        node.removeClass('highlighted').addClass('dimmed');
-                    }
-                });
-
-                cy.edges().addClass('dimmed');
-
-                // Update stats
-                document.getElementById('stats').textContent =
-                    `${matchingTables.length} of ${schemaData.tables.length} tables`;
-            }
-
-            function clearSearch() {
-                searchInput.value = '';
-                searchContainer.classList.remove('has-value');
-                clearHighlights();
-                cy.elements().removeClass('dimmed highlighted');
-                document.getElementById('stats').textContent =
-                    `${schemaData.tables.length} tables`;
-            }
-
-            searchInput.addEventListener('input', updateSearch);
-
-            // Clear button click
-            clearBtn.addEventListener('click', function() {
-                clearSearch();
-                searchInput.focus();
-            });
-
-            // Clear search on Escape
-            searchInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    clearSearch();
-                    searchInput.blur();
-                }
-            });
-        }
-
-        function setupZoomControls() {
-            document.getElementById('zoom-in').addEventListener('click', () => {
-                cy.animate({
-                    zoom: cy.zoom() * 1.3,
-                    center: { eles: cy.elements() }
-                }, { duration: 200 });
-            });
-
-            document.getElementById('zoom-out').addEventListener('click', () => {
-                cy.animate({
-                    zoom: cy.zoom() / 1.3,
-                    center: { eles: cy.elements() }
-                }, { duration: 200 });
-            });
-
-            document.getElementById('zoom-fit').addEventListener('click', fitToView);
-        }
-
-        function fitToView() {
-            cy.animate({
-                fit: { eles: cy.elements(), padding: 50 }
-            }, { duration: 300 });
-        }
-
-        function updateZoomLevel() {
-            const zoom = Math.round(cy.zoom() * 100);
-            document.getElementById('zoom-level').textContent = `${zoom}%`;
-        }
-
-        function setupKeyboardShortcuts() {
-            document.addEventListener('keydown', function(e) {
-                const searchInput = document.getElementById('search');
-                const isTyping = document.activeElement === searchInput;
-
-                // Focus search on / (when not already typing)
-                if (e.key === '/' && !isTyping) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    searchInput.focus();
-                    searchInput.select();
-                    return;
-                }
-
-                // Don't process other shortcuts while typing in search
-                if (isTyping) return;
-
-                // Close details on Escape
-                if (e.key === 'Escape' && selectedTable) {
-                    closeDetails();
-                }
-
-                // Refresh on R
-                if (e.key === 'r' || e.key === 'R') {
-                    e.preventDefault();
-                    refreshSchema();
-                }
-
-                // Zoom shortcuts
-                if (e.key === '+' || e.key === '=') {
-                    e.preventDefault();
-                    cy.animate({ zoom: cy.zoom() * 1.2 }, { duration: 150 });
-                }
-                if (e.key === '-' || e.key === '_') {
-                    e.preventDefault();
-                    cy.animate({ zoom: cy.zoom() / 1.2 }, { duration: 150 });
-                }
-                if (e.key === '0') {
-                    e.preventDefault();
-                    fitToView();
-                }
-            });
-        }
-
-        loadDatabases();
-        loadSchema();
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
