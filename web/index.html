@@ -5,27 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Database Schema Visualizer</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
-    <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
-    <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
 </head>
 <body>
     <header>
         <h1>Schema Visualizer</h1>
         <div class="db-selector">
             <label for="db-select">DB:</label>
-            <select id="db-select" onchange="switchDatabase(this.value)"></select>
+            <select id="db-select"></select>
         </div>
         <div class="view-toggle">
-            <button id="view-graph" class="active" onclick="setView('graph')">Graph</button>
-            <button id="view-list" onclick="setView('list')">List</button>
+            <button id="view-graph" class="active">Graph</button>
+            <button id="view-list">List</button>
+        </div>
+        <div class="layout-toggle">
+            <button id="layout-dagre" class="active" title="Hierarchical layout">Dagre</button>
+            <button id="layout-cose" title="Force-directed layout">Force</button>
         </div>
         <div class="search-container" id="search-container">
             <input type="text" id="search" placeholder="Search tables or columns... (/)" />
             <button class="search-clear" id="search-clear" title="Clear search">&times;</button>
         </div>
         <span class="header-stats" id="stats"></span>
-        <button class="refresh-btn" id="refresh-btn" onclick="refreshSchema()" title="Refresh schema (R)">
+        <button class="refresh-btn" id="refresh-btn" title="Refresh schema (R)">
             <span class="refresh-icon">&#8635;</span>
             Refresh
         </button>
@@ -62,11 +63,11 @@
     </div>
 
     <!-- Create Table Modal -->
-    <div id="create-table-modal" class="modal-overlay" onclick="if(event.target===this) hideCreateTableModal()">
-        <div class="modal">
+    <div id="create-table-modal" class="modal-overlay">
+        <div class="modal-dialog">
             <div class="modal-header">
                 <h3>Create New Table</h3>
-                <button class="modal-close" onclick="hideCreateTableModal()">&times;</button>
+                <button class="modal-close" id="close-create-table">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -79,18 +80,18 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="hideCreateTableModal()">Cancel</button>
-                <button class="btn btn-primary" id="create-table-btn" onclick="createTable()">Create Table</button>
+                <button class="btn btn-secondary" id="cancel-create-table">Cancel</button>
+                <button class="btn btn-primary" id="create-table-btn">Create Table</button>
             </div>
         </div>
     </div>
 
     <!-- Add Column Modal -->
-    <div id="add-column-modal" class="modal-overlay" onclick="if(event.target===this) hideAddColumnModal()">
-        <div class="modal">
+    <div id="add-column-modal" class="modal-overlay">
+        <div class="modal-dialog">
             <div class="modal-header">
                 <h3>Add Column to <span id="add-column-table-name"></span></h3>
-                <button class="modal-close" onclick="hideAddColumnModal()">&times;</button>
+                <button class="modal-close" id="close-add-column">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -100,9 +101,8 @@
                 <div class="form-group">
                     <label for="new-column-type">Data Type</label>
                     <select id="new-column-type" class="form-select">
-                        <option value="text">text - Variable length string</option>
-                        <option value="date">date - Date only</option>
-                        <option value="numeric">numeric - Decimal number</option>
+                        <!-- Populated dynamically from /api/types -->
+                        <option value="">Loading types...</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -125,7 +125,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-checkbox">
-                        <input type="checkbox" id="new-column-fk" onchange="toggleForeignKeySection()">
+                        <input type="checkbox" id="new-column-fk">
                         <span>Foreign Key</span>
                     </label>
                     <div id="fk-section" class="form-section disabled">
@@ -133,7 +133,7 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="fk-table">Table</label>
-                                <select id="fk-table" class="form-select" onchange="loadForeignKeyColumns()">
+                                <select id="fk-table" class="form-select">
                                     <option value="">Select table...</option>
                                 </select>
                             </div>
@@ -148,12 +148,13 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="hideAddColumnModal()">Cancel</button>
-                <button class="btn btn-primary" id="add-column-btn" onclick="addColumn()">Add Column</button>
+                <button class="btn btn-secondary" id="cancel-add-column">Cancel</button>
+                <button class="btn btn-primary" id="add-column-btn">Add Column</button>
             </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <!-- TypeScript Bundle -->
+    <script src="dist/bundle.js"></script>
 </body>
 </html>

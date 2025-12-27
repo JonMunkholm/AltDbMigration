@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/JonMunkholm/AltDbMigration/internal/api"
 	"github.com/JonMunkholm/AltDbMigration/internal/config"
@@ -39,17 +38,21 @@ func main() {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
 
-	introspector := schema.NewIntrospector(pool, cfg.CurrentDatabase())
-	handler := api.NewHandler(introspector, webFS, cfg)
+	introspector := schema.NewIntrospector(pool, cfg.CurrentDatabase(), cfg.QueryTimeout)
+	handler, err := api.NewHandler(introspector, webFS, cfg)
+	if err != nil {
+		log.Fatalf("Failed to create API handler: %v", err)
+	}
 
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
 	server := &http.Server{
-		Addr:         ":" + cfg.Port,
-		Handler:      mux,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		Addr:           ":" + cfg.Port,
+		Handler:        mux,
+		ReadTimeout:    cfg.ReadTimeout,
+		WriteTimeout:   cfg.WriteTimeout,
+		MaxHeaderBytes: 1 << 20, // 1 MB
 	}
 
 	go func() {
@@ -58,12 +61,13 @@ func main() {
 		<-sigCh
 
 		log.Println("Shutting down...")
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 		defer shutdownCancel()
 
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			log.Printf("Shutdown error: %v", err)
 		}
+		handler.Stop()
 		cancel()
 	}()
 
